@@ -26,3 +26,4 @@ flutter config --enable-web
 
 # Run doctor
 flutter doctor
+chmod +x .devcontainer/install-flutter.sh
