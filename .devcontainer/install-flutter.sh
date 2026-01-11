@@ -14,16 +14,15 @@ curl -LO https://storage.googleapis.com/flutter_infra_release/releases/stable/li
 # Extract Flutter
 tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
 
-# Move to /usr/local/flutter (optional)
+# Move to /usr/local/flutter
 sudo mv flutter /usr/local/flutter
 
-# Add Flutter to PATH
+# Add Flutter to PATH for all future shells
 echo 'export PATH="$PATH:/usr/local/flutter/bin"' >> ~/.bashrc
 export PATH="$PATH:/usr/local/flutter/bin"
 
-# Enable web
+# Enable web support
 flutter config --enable-web
 
-# Run doctor
+# Check Flutter install
 flutter doctor
-chmod +x .devcontainer/install-flutter.sh

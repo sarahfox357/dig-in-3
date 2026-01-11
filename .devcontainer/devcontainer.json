@@ -1,7 +1,4 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {}
-}{
   "name": "Flutter Codespace",
   "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu-22.04",
   "features": {
