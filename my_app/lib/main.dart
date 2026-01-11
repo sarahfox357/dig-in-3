@@ -446,17 +446,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     );
                   }
                 },
-                child: const Text('Upload URL'),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {},
-                child: const Text('Upload Photo'),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {},
-                child: const Text('Upload from Social Media'),
+                child: const Text('Upload from URL or Social Media'),
               ),
               const SizedBox(height: 8),
               ElevatedButton(
@@ -718,10 +708,10 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Enter Recipe URL'),
+          title: const Text('Paste Recipe URL'),
           content: TextField(
             controller: urlController,
-            decoration: const InputDecoration(hintText: 'https://...'),
+            decoration: const InputDecoration(hintText: 'Enter URL'),
           ),
           actions: [
             TextButton(
@@ -730,7 +720,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, urlController.text),
-              child: const Text('Fetch Recipe'),
+              child: const Text('Add'),
             ),
           ],
         );
@@ -738,41 +728,69 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // ------------------------ URL FETCH ------------------------
   Future<void> _handleRecipeUrl(String url) async {
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final document = parse(response.body);
-
-        // Basic example: find <h1> title and <li> ingredients
-        final title = document.querySelector('h1')?.text ?? 'Untitled Recipe';
-        final ingredients = document
-                .querySelectorAll('li')
-                .map((e) => e.text.trim())
-                .where((e) => e.isNotEmpty)
-                .toList() ??
-            [];
-        final instructions = ingredients; // Simplified for demo
-
+        final title = document.querySelector('title')?.text ?? 'Recipe';
         setState(() {
-          recipes.add(Recipe(
-            title: title,
-            ingredients: ingredients,
-            instructions: instructions,
-            categories: [],
-            imagePath: 'https://via.placeholder.com/150',
-          ));
+          recipes.add(
+            Recipe(
+              title: title,
+              ingredients: [],
+              instructions: [],
+              categories: [],
+              imagePath: 'https://via.placeholder.com/150',
+            ),
+          );
         });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to fetch recipe URL')),
-        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      debugPrint('Error fetching recipe: $e');
     }
+  }
+}
+
+// ------------------------ RECIPE DETAIL SCREEN ------------------------
+class RecipeDetailScreen extends StatelessWidget {
+  final Recipe recipe;
+
+  const RecipeDetailScreen({super.key, required this.recipe});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(recipe.title),
+        backgroundColor: primaryColor,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: [
+            Image.network(
+              recipe.imagePath,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(height: 16),
+            Text('Ingredients',
+                style: GoogleFonts.playfairDisplay(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            for (var ing in recipe.ingredients) Text('- $ing'),
+            const SizedBox(height: 16),
+            Text('Instructions',
+                style: GoogleFonts.playfairDisplay(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            for (var i = 0; i < recipe.instructions.length; i++)
+              Text('${i + 1}. ${recipe.instructions[i]}'),
+          ],
+        ),
+      ),
+    );
   }
 }
