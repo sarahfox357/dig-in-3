@@ -143,6 +143,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
+  int? editRecipeIndex;
+  int? editingRecipeIndex;
   bool _showManualForm = false;
 
   List<Recipe> recipes = [];
@@ -442,7 +444,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (url != null && url.isNotEmpty) {
                     await _handleRecipeUrl(url);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Recipe added from URL!')),
+                      const SnackBar(
+                        content: Text('Recipe added from URL!'),
+                      ),
                     );
                   }
                 },
@@ -453,19 +457,25 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: () {
                   setState(() {
                     _showManualForm = true;
-                    tempIngredients = [];
-                    tempInstructions = [];
+                    editingRecipeIndex = null;
+                    titleController.clear();
+                    tempIngredients.clear();
+                    tempInstructions.clear();
+                    selectedCategories.clear();
                   });
                 },
                 child: const Text('Upload Manually'),
               ),
             ] else ...[
               // ---------------- MANUAL FORM ----------------
+
               TextField(
                 controller: titleController,
                 decoration: const InputDecoration(labelText: 'Recipe Title'),
               ),
-              const SizedBox(height: 8),
+
+              const SizedBox(height: 12),
+
               Wrap(
                 spacing: 8,
                 children: categories.map((cat) {
@@ -485,8 +495,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
-              const Text('Ingredients (one per line):'),
+
+              const SizedBox(height: 20),
+
+              // INGREDIENTS
+              const Text(
+                'Ingredients',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
               for (var ing in tempIngredients)
                 ListTile(
                   title: Text(ing),
@@ -499,12 +516,14 @@ class _MyHomePageState extends State<MyHomePage> {
                     },
                   ),
                 ),
+
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: newIngredientController,
-                      decoration: const InputDecoration(hintText: 'Ingredient'),
+                      decoration:
+                          const InputDecoration(hintText: 'Add ingredient'),
                     ),
                   ),
                   IconButton(
@@ -512,7 +531,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: () {
                       if (newIngredientController.text.isNotEmpty) {
                         setState(() {
-                          tempIngredients.add(newIngredientController.text);
+                          tempIngredients
+                              .add(newIngredientController.text.trim());
                           newIngredientController.clear();
                         });
                       }
@@ -520,8 +540,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text('Instructions:'),
+
+              const SizedBox(height: 20),
+
+              // INSTRUCTIONS
+              const Text(
+                'Instructions',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
               for (var i = 0; i < tempInstructions.length; i++)
                 ListTile(
                   title: Text('${i + 1}. ${tempInstructions[i]}'),
@@ -534,13 +561,15 @@ class _MyHomePageState extends State<MyHomePage> {
                     },
                   ),
                 ),
+
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: newInstructionController,
-                      decoration:
-                          const InputDecoration(hintText: 'Step instruction'),
+                      decoration: const InputDecoration(
+                        hintText: 'Add instruction step',
+                      ),
                     ),
                   ),
                   IconButton(
@@ -548,7 +577,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: () {
                       if (newInstructionController.text.isNotEmpty) {
                         setState(() {
-                          tempInstructions.add(newInstructionController.text);
+                          tempInstructions
+                              .add(newInstructionController.text.trim());
                           newInstructionController.clear();
                         });
                       }
@@ -556,7 +586,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 24),
+
+              // SAVE / UPDATE BUTTON
               ElevatedButton(
                 onPressed: () {
                   if (titleController.text.isEmpty ||
@@ -564,14 +597,22 @@ class _MyHomePageState extends State<MyHomePage> {
                       tempInstructions.isEmpty) return;
 
                   setState(() {
-                    recipes.add(Recipe(
-                      title: titleController.text,
+                    final newRecipe = Recipe(
+                      title: titleController.text.trim(),
                       ingredients: List.from(tempIngredients),
                       instructions: List.from(tempInstructions),
                       categories: List.from(selectedCategories),
-                      imagePath:
-                          'https://via.placeholder.com/150', // placeholder
-                    ));
+                      imagePath: 'https://via.placeholder.com/150',
+                    );
+
+                    if (editingRecipeIndex != null) {
+                      // UPDATE EXISTING
+                      recipes[editingRecipeIndex!] = newRecipe;
+                      editingRecipeIndex = null;
+                    } else {
+                      // CREATE NEW
+                      recipes.add(newRecipe);
+                    }
 
                     titleController.clear();
                     tempIngredients.clear();
@@ -580,7 +621,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     _showManualForm = false;
                   });
                 },
-                child: const Text('Save Recipe'),
+                child: Text(
+                  editingRecipeIndex == null ? 'Save Recipe' : 'Update Recipe',
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    editingRecipeIndex = null;
+                    _showManualForm = false;
+                  });
+                },
+                child: const Text('Cancel'),
               ),
             ],
           ],
@@ -755,41 +810,98 @@ class _MyHomePageState extends State<MyHomePage> {
 // ------------------------ RECIPE DETAIL SCREEN ------------------------
 class RecipeDetailScreen extends StatelessWidget {
   final Recipe recipe;
+  final Function(List<String>) onAddToGrocery;
 
-  const RecipeDetailScreen({super.key, required this.recipe});
+  const RecipeDetailScreen({
+    super.key,
+    required this.recipe,
+    required this.onAddToGrocery,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(recipe.title),
+        title: Text(
+          recipe.title,
+          style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: primaryColor,
+        foregroundColor: textColor,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            Image.network(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
               recipe.imagePath,
-              height: 200,
+              height: 220,
               width: double.infinity,
               fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                height: 220,
+                color: accentColor.withOpacity(0.3),
+                child: const Icon(Icons.image, size: 60),
+              ),
             ),
-            const SizedBox(height: 16),
-            Text('Ingredients',
-                style: GoogleFonts.playfairDisplay(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            for (var ing in recipe.ingredients) Text('- $ing'),
-            const SizedBox(height: 16),
-            Text('Instructions',
-                style: GoogleFonts.playfairDisplay(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            for (var i = 0; i < recipe.instructions.length; i++)
-              Text('${i + 1}. ${recipe.instructions[i]}'),
-          ],
-        ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Ingredients',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (recipe.ingredients.isEmpty)
+            const Text('No ingredients added.')
+          else
+            ...recipe.ingredients.map(
+              (ing) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text('• $ing'),
+              ),
+            ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.add_shopping_cart),
+            label: const Text('Add Ingredients to Grocery List'),
+            onPressed: recipe.ingredients.isEmpty
+                ? null
+                : () {
+                    onAddToGrocery(recipe.ingredients);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Ingredients added to grocery list 🛒'),
+                      ),
+                    );
+                  },
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Instructions',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (recipe.instructions.isEmpty)
+            const Text('No instructions added.')
+          else
+            ...List.generate(
+              recipe.instructions.length,
+              (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  '${i + 1}. ${recipe.instructions[i]}',
+                  style: const TextStyle(height: 1.4),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
