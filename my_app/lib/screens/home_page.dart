@@ -21,21 +21,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List<Recipe> recipes = [];
   List<GroceryItem> groceryItems = [];
-  String? newRecipeImagePath;
 
+  String? newRecipeImagePath;
   final titleController = TextEditingController();
   final usernameController = TextEditingController();
   final newIngredientController = TextEditingController();
   final newInstructionController = TextEditingController();
   String username = "ChefMaster";
+
   List<String> selectedCategories = [];
   List<String> tempIngredients = [];
   List<String> tempInstructions = [];
 
   // ------------------------ NEW STATE VARIABLES ------------------------
+  List<Recipe> plannedRecipes = [];
   Set<String> autoAddedIngredients = {};
   Set<String> removedAutoIngredients = {};
-  List<Recipe> plannedRecipes = [];
   bool showOnlyNeeded = true;
 
   // ------------------------ TABS ------------------------
@@ -66,7 +67,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // ------------------------ BUILD ------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,10 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
         decoration: BoxDecoration(
           color: backgroundColor,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
           ],
         ),
         child: Row(
@@ -108,11 +105,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   color: primaryColor,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.add,
-                  size: 32,
-                  color: textColor,
-                ),
+                child: const Icon(Icons.add, size: 32, color: textColor),
               ),
             ),
             _navItem(Icons.search, 3),
@@ -160,7 +153,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   fillColor: accentColor,
                   hintText: 'Search recipes...',
                   hintStyle: GoogleFonts.playfairDisplay(
-                      color: textColor.withOpacity(0.7)),
+                    color: textColor.withOpacity(0.7),
+                  ),
                   prefixIcon: const Icon(Icons.search, color: primaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -182,7 +176,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       label: Text(
                         cat,
                         style: GoogleFonts.playfairDisplay(
-                            color: isSelected ? backgroundColor : textColor),
+                          color: isSelected ? backgroundColor : textColor,
+                        ),
                       ),
                       selected: isSelected,
                       selectedColor: primaryColor,
@@ -200,38 +195,64 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: ListView(
                 children: filteredRecipes.map((r) {
+                  final isPlanned = plannedRecipes.contains(r);
                   return Card(
                     color: accentColor.withOpacity(0.4),
-                    margin:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          r.imagePath,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
+                      leading: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              r.imagePath,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          if (isPlanned)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.restaurant,
+                                  size: 16,
+                                  color: backgroundColor,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      title: Text(
+                        r.title,
+                        style: GoogleFonts.playfairDisplay(
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
                         ),
                       ),
-                      title: Text(r.title,
-                          style: GoogleFonts.playfairDisplay(
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor)),
-                      subtitle: Text(r.categories.join(', '),
-                          style: GoogleFonts.playfairDisplay(color: textColor)),
-                      onTap: () async {
-                        // Keep your existing ingredient-to-grocery dialog here
-                      },
+                      subtitle: Text(
+                        r.categories.join(', '),
+                        style: GoogleFonts.playfairDisplay(color: textColor),
+                      ),
                       trailing: Checkbox(
-                        value: plannedRecipes.contains(r),
+                        value: isPlanned,
                         onChanged: (val) {
                           setState(() {
                             if (val == true) {
                               plannedRecipes.add(r);
-
                               for (var ing in r.ingredients) {
                                 if (!groceryItems.any((g) => g.name == ing)) {
                                   groceryItems.add(GroceryItem(name: ing));
@@ -240,7 +261,6 @@ class _MyHomePageState extends State<MyHomePage> {
                               }
                             } else {
                               plannedRecipes.remove(r);
-
                               for (var ing in r.ingredients) {
                                 removedAutoIngredients.add(ing);
                               }
@@ -248,6 +268,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           });
                         },
                       ),
+                      onTap: () async {
+                        // Your existing recipe ingredient selection dialog
+                      },
                     ),
                   );
                 }).toList(),
@@ -278,6 +301,9 @@ class _MyHomePageState extends State<MyHomePage> {
         recipeIngredientMap[recipe.title] = ingredients;
       }
     }
+
+    final totalPlannedIngredients =
+        recipeIngredientMap.values.fold(0, (sum, list) => sum + list.length);
 
     return Column(
       children: [
@@ -312,9 +338,9 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Show only needed items',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text(
+                '${plannedRecipes.length} recipes planned, $totalPlannedIngredients ingredients',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Switch(
                 value: showOnlyNeeded,
@@ -329,72 +355,37 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         Flexible(
           flex: 1,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ListView(
-              children: [
-                ...recipeIngredientMap.entries.expand((entry) {
-                  final recipeName = entry.key;
-                  final ingredients = entry.value;
+          child: ListView(
+            children: [
+              // Auto-added ingredients from planned recipes
+              ...recipeIngredientMap.entries.expand((entry) {
+                final recipeName = entry.key;
+                final ingredients = entry.value;
 
-                  return [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text(
-                        recipeName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                return [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Text(
+                      recipeName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
-                    ...ingredients.map((ing) {
-                      final item =
-                          groceryItems.firstWhere((g) => g.name == ing);
-                      if (showOnlyNeeded && item.bought)
-                        return const SizedBox.shrink();
-
-                      return CheckboxListTile(
-                        title: Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        value: item.bought,
-                        onChanged: (val) {
-                          setState(() {
-                            item.bought = val ?? false;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ];
-                }),
-                if (manualItems.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'Manual Items',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
                   ),
-                  ...manualItems.map((item) {
+                  ...ingredients.map((ing) {
+                    final item = groceryItems.firstWhere((g) => g.name == ing);
                     if (showOnlyNeeded && item.bought)
                       return const SizedBox.shrink();
 
                     return CheckboxListTile(
                       title: Text(
                         item.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                        style: TextStyle(
+                          decoration:
+                              item.bought ? TextDecoration.lineThrough : null,
+                          color: item.bought ? Colors.grey : Colors.black,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                       value: item.bought,
@@ -405,33 +396,57 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                     );
                   }).toList(),
-                ],
-                if (!showOnlyNeeded)
-                  ...removedAutoIngredients.map((name) {
-                    return ListTile(
+                ];
+              }),
+
+              // Manual grocery items
+              if (manualItems.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    'Manual Items',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                ...manualItems.map((item) {
+                  if (showOnlyNeeded && item.bought)
+                    return const SizedBox.shrink();
+
+                  return Dismissible(
+                    key: Key(item.name),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (direction) {
+                      setState(() {
+                        groceryItems.remove(item);
+                      });
+                    },
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 16),
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    child: CheckboxListTile(
                       title: Text(
-                        name,
-                        style: const TextStyle(
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey,
-                          decoration: TextDecoration.lineThrough,
+                        item.name,
+                        style: TextStyle(
+                          decoration:
+                              item.bought ? TextDecoration.lineThrough : null,
+                          color: item.bought ? Colors.grey : Colors.black,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.add, color: Colors.green),
-                        onPressed: () {
-                          setState(() {
-                            removedAutoIngredients.remove(name);
-                            if (!groceryItems.any((g) => g.name == name)) {
-                              groceryItems.add(GroceryItem(name: name));
-                            }
-                          });
-                        },
-                      ),
-                    );
-                  }),
+                      value: item.bought,
+                      onChanged: (val) {
+                        setState(() {
+                          item.bought = val ?? false;
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
               ],
-            ),
+            ],
           ),
         ),
       ],
@@ -466,9 +481,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (url != null && url.isNotEmpty) {
                     await _handleRecipeUrl(url);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Recipe added from URL!'),
-                      ),
+                      const SnackBar(content: Text('Recipe added from URL!')),
                     );
                   }
                 },
@@ -537,8 +550,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     child: TextField(
                       controller: newIngredientController,
-                      decoration:
-                          const InputDecoration(hintText: 'Add ingredient'),
+                      decoration: const InputDecoration(
+                        hintText: 'Add ingredient',
+                      ),
                     ),
                   ),
                   IconButton(
@@ -546,8 +560,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: () {
                       if (newIngredientController.text.isNotEmpty) {
                         setState(() {
-                          tempIngredients
-                              .add(newIngredientController.text.trim());
+                          tempIngredients.add(
+                            newIngredientController.text.trim(),
+                          );
                           newIngredientController.clear();
                         });
                       }
@@ -588,8 +603,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     onPressed: () {
                       if (newInstructionController.text.isNotEmpty) {
                         setState(() {
-                          tempInstructions
-                              .add(newInstructionController.text.trim());
+                          tempInstructions.add(
+                            newInstructionController.text.trim(),
+                          );
                           newInstructionController.clear();
                         });
                       }
@@ -697,11 +713,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ],
                   ),
                 ),
-                Center(
-                  child: Text(
-                    'My Recipes: ${recipes.length}',
-                  ),
-                ),
+                Center(child: Text('My Recipes: ${recipes.length}')),
               ],
             ),
           ),
