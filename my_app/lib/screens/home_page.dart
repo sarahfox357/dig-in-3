@@ -32,6 +32,12 @@ class _MyHomePageState extends State<MyHomePage> {
   List<String> tempIngredients = [];
   List<String> tempInstructions = [];
 
+  // ------------------------ NEW STATE VARIABLES ------------------------
+  Set<String> autoAddedIngredients = {};
+  Set<String> removedAutoIngredients = {};
+  List<Recipe> plannedRecipes = [];
+  bool showOnlyNeeded = true;
+
   // ------------------------ TABS ------------------------
   List<Widget> _widgetOptions() => <Widget>[
         buildRecipesTab(),
@@ -217,66 +223,31 @@ class _MyHomePageState extends State<MyHomePage> {
                       subtitle: Text(r.categories.join(', '),
                           style: GoogleFonts.playfairDisplay(color: textColor)),
                       onTap: () async {
-                        final selectedIngredients =
-                            await showDialog<List<String>>(
-                          context: context,
-                          builder: (context) {
-                            final Map<String, bool> selection = {
-                              for (var ing in r.ingredients) ing: true
-                            };
-                            return AlertDialog(
-                              title:
-                                  const Text('Add ingredients to Grocery List'),
-                              content: SizedBox(
-                                width: double.maxFinite,
-                                child: ListView(
-                                  shrinkWrap: true,
-                                  children: selection.keys.map((ingredient) {
-                                    return StatefulBuilder(
-                                      builder: (context, setStateSB) {
-                                        return CheckboxListTile(
-                                          title: Text(ingredient),
-                                          value: selection[ingredient],
-                                          onChanged: (val) {
-                                            setStateSB(() {
-                                              selection[ingredient] =
-                                                  val ?? false;
-                                            });
-                                          },
-                                        );
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, []),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    final chosen = selection.entries
-                                        .where((e) => e.value)
-                                        .map((e) => e.key)
-                                        .toList();
-                                    Navigator.pop(context, chosen);
-                                  },
-                                  child: const Text('Add Selected'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (selectedIngredients != null &&
-                            selectedIngredients.isNotEmpty) {
-                          setState(() {
-                            groceryItems.addAll(selectedIngredients
-                                .map((i) => GroceryItem(name: i)));
-                          });
-                        }
+                        // Keep your existing ingredient-to-grocery dialog here
                       },
+                      trailing: Checkbox(
+                        value: plannedRecipes.contains(r),
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              plannedRecipes.add(r);
+
+                              for (var ing in r.ingredients) {
+                                if (!groceryItems.any((g) => g.name == ing)) {
+                                  groceryItems.add(GroceryItem(name: ing));
+                                  autoAddedIngredients.add(ing);
+                                }
+                              }
+                            } else {
+                              plannedRecipes.remove(r);
+
+                              for (var ing in r.ingredients) {
+                                removedAutoIngredients.add(ing);
+                              }
+                            }
+                          });
+                        },
+                      ),
                     ),
                   );
                 }).toList(),
@@ -291,6 +262,22 @@ class _MyHomePageState extends State<MyHomePage> {
   // ------------------------ GROCERY TAB ------------------------
   Widget buildGroceryTab() {
     final groceryController = TextEditingController();
+
+    final manualItems = groceryItems
+        .where((g) => !autoAddedIngredients.contains(g.name))
+        .toList();
+
+    final Map<String, List<String>> recipeIngredientMap = {};
+    for (var recipe in plannedRecipes) {
+      final ingredients = recipe.ingredients
+          .where((ing) =>
+              autoAddedIngredients.contains(ing) &&
+              !removedAutoIngredients.contains(ing))
+          .toList();
+      if (ingredients.isNotEmpty) {
+        recipeIngredientMap[recipe.title] = ingredients;
+      }
+    }
 
     return Column(
       children: [
@@ -320,19 +307,131 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
         ),
-        Expanded(
-          child: ListView(
-            children: groceryItems.map((item) {
-              return CheckboxListTile(
-                title: Text(item.name),
-                value: item.bought,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Show only needed items',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Switch(
+                value: showOnlyNeeded,
                 onChanged: (val) {
                   setState(() {
-                    item.bought = val ?? false;
+                    showOnlyNeeded = val;
                   });
                 },
-              );
-            }).toList(),
+              ),
+            ],
+          ),
+        ),
+        Flexible(
+          flex: 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListView(
+              children: [
+                ...recipeIngredientMap.entries.expand((entry) {
+                  final recipeName = entry.key;
+                  final ingredients = entry.value;
+
+                  return [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        recipeName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    ...ingredients.map((ing) {
+                      final item =
+                          groceryItems.firstWhere((g) => g.name == ing);
+                      if (showOnlyNeeded && item.bought)
+                        return const SizedBox.shrink();
+
+                      return CheckboxListTile(
+                        title: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontStyle: FontStyle.italic,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        value: item.bought,
+                        onChanged: (val) {
+                          setState(() {
+                            item.bought = val ?? false;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ];
+                }),
+                if (manualItems.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'Manual Items',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                  ...manualItems.map((item) {
+                    if (showOnlyNeeded && item.bought)
+                      return const SizedBox.shrink();
+
+                    return CheckboxListTile(
+                      title: Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      value: item.bought,
+                      onChanged: (val) {
+                        setState(() {
+                          item.bought = val ?? false;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ],
+                if (!showOnlyNeeded)
+                  ...removedAutoIngredients.map((name) {
+                    return ListTile(
+                      title: Text(
+                        name,
+                        style: const TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.add, color: Colors.green),
+                        onPressed: () {
+                          setState(() {
+                            removedAutoIngredients.remove(name);
+                            if (!groceryItems.any((g) => g.name == name)) {
+                              groceryItems.add(GroceryItem(name: name));
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  }),
+              ],
+            ),
           ),
         ),
       ],

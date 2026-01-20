@@ -8,56 +8,96 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen height
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Calculate top padding for content
+    // 35% down from top of screen is usually a good “safe spot”
+    final topPadding = screenHeight * 0.35;
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Welcome to Your Recipe App!',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Discover, create, and manage your favorite recipes.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 18,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MyHomePage()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                  backgroundColor: primaryColor,
-                ),
-                child: Text(
-                  'Get Started',
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 20,
-                    color: backgroundColor,
-                  ),
-                ),
-              ),
-            ],
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/dig_in.png',
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
+
+          // Subtle overlay for readability
+          Container(
+            color: Colors.black.withOpacity(0.15),
+          ),
+
+          // Responsive content
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(top: topPadding, left: 32, right: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Title
+                  Text(
+                    'Dig In',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700,
+                      color: backgroundColor,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Subtitle
+                  Text(
+                    'Discover, create, and manage\nyour favorite recipes.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 18,
+                      height: 1.5,
+                      color: backgroundColor.withOpacity(0.9),
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Button
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MyHomePage(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Let’s Dig In',
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: backgroundColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
