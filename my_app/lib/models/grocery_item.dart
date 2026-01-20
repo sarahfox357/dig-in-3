@@ -2,5 +2,8 @@ class GroceryItem {
   String name;
   bool bought;
 
-  GroceryItem({required this.name, this.bought = false});
+  GroceryItem({
+    required this.name,
+    this.bought = false,
+  });
 }

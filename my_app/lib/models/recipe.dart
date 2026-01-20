@@ -1,9 +1,9 @@
 class Recipe {
-  final String title;
-  final List<String> ingredients;
-  final List<String> instructions;
-  final List<String> categories;
-  final String imagePath;
+  String title;
+  List<String> ingredients;
+  List<String> instructions;
+  List<String> categories;
+  String imagePath; // Can be a URL or local asset path
 
   Recipe({
     required this.title,
